@@ -12,6 +12,11 @@ GROCLAKE is a comprehensive platform that revolutionizes vendor pricing strategi
 - **User-Friendly**: Intuitive dashboard for actionable insights
 - **Trust Building**: Enhances vendor-consumer relationships through optimized pricing
 
+
+## 🎲 Project Overview 🎲
+
+This project is a comprehensive data scraping and price-tracking platform designed to help users gather, monitor, and visualize data from various sources. It empowers businesses and individuals to make smarter decisions by staying informed about price trends, product changes, and market shifts. Additionally, the platform includes an AI-powered marketing content generator to help users create compelling marketing content quickly and effortlessly.
+
 ## Architecture Diagram
 ![Internet](https://github.com/user-attachments/assets/476f7002-a535-4917-b100-15aba3278d6f)
 
@@ -24,9 +29,6 @@ GROCLAKE is a comprehensive platform that revolutionizes vendor pricing strategi
 https://github.com/user-attachments/assets/cb455c73-7d17-4286-a527-499b05d0deb9
 
 
-## 🎲 Project Overview 🎲
-
-This project is a comprehensive data scraping and price-tracking platform designed to help users gather, monitor, and visualize data from various sources. It empowers businesses and individuals to make smarter decisions by staying informed about price trends, product changes, and market shifts. Additionally, the platform includes an AI-powered marketing content generator to help users create compelling marketing content quickly and effortlessly.
 
 ## 💡 Our Solution 
 
