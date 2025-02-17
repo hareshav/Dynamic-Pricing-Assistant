@@ -59,8 +59,8 @@ const Dashboard = () => {
   const COLORS = ["#4ADE80", "#FACC15", "#E879F9", "#38BDF8", "#FB923C", "#A855F7", "#34D399", "#F472B6", "#60A5FA", "#FCD34D"];
 
   return (
-    <div className="p-6  min-h-screen">
-      <h2 className="text-4xl mb-10 font-bold my-4 text-cyan-400 text-center">Product Dashboard</h2>
+    <div className="p-6 bg-gray-900 min-h-screen">
+      <h2 className="text-2xl font-bold my-4 text-white text-center">Product Dashboard</h2>
 
       {/* Grid Layout for Two Charts per Row */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -135,6 +135,7 @@ const Dashboard = () => {
             </PieChart>
           </ResponsiveContainer>
         </div>
+        
       </div>
     </div>
   );
