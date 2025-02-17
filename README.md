@@ -12,6 +12,11 @@ GROCLAKE is a comprehensive platform that revolutionizes vendor pricing strategi
 - **User-Friendly**: Intuitive dashboard for actionable insights
 - **Trust Building**: Enhances vendor-consumer relationships through optimized pricing
 
+## Architecture Diagram
+![Internet](https://github.com/user-attachments/assets/476f7002-a535-4917-b100-15aba3278d6f)
+
+
+
 ## 🎭Demo Vedio 🎭
 
 ### Working of the Application Developed!!!
@@ -76,6 +81,3 @@ Our platform consists of six integrated lakes:
 - User interface
 - API management
 
-
-## Architecture Diagram
-![Internet](https://github.com/user-attachments/assets/476f7002-a535-4917-b100-15aba3278d6f)
