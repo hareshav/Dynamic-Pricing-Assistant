@@ -6,7 +6,7 @@ const Navbar = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
-    <nav className=" bg-gray-900 opacity-95 border-gray-700 mb-10 sticky top-0 z-10">
+    <nav className=" bg-black opacity-95 border-b border-gray-900 mb-10 sticky top-0 z-10">
       <div className="max-w-screen-xl flex flex-wrap items-center justify-between mx-auto p-4">
         <Link to="/" className="flex items-center space-x-3 rtl:space-x-reverse">
           <img src="https://cdn-icons-png.flaticon.com/512/8071/8071223.png" className="h-10" alt="Logo" />
@@ -24,12 +24,18 @@ const Navbar = () => {
           </svg>
         </button>
         <div className={`${mobileMenuOpen ? "block" : "hidden"} w-full md:block md:w-auto`}>
-          <ul className="flex flex-col font-medium p-4 md:p-0 mt-4 border border-gray-100 rounded-lg bg-gray-50 md:space-x-8 rtl:space-x-reverse md:flex-row md:mt-0 md:border-0 md:bg-white dark:bg-gray-800 md:dark:bg-gray-900 dark:border-gray-700">
+          <ul className="flex flex-col font-medium p-4 md:p-0 mt-4 border border-gray-100 rounded-lg bg-gray-50 md:space-x-8 rtl:space-x-reverse md:flex-row md:mt-0 md:border-0 md:bg-white dark:bg-gray-950 md:dark:bg-gray-950 dark:border-gray-950">
             <li>
               <Link to="/" className="block py-2 px-3 hover:text-zinc-400 text-white bg-blue-700 rounded-sm md:bg-transparent md:text-blue-700 md:p-0 md:dark:text-zinc-200">Home</Link>
             </li>
             <li>
               <Link to="/dashboard" className="block py-2 px-3 hover:text-zinc-400 text-white bg-blue-700 rounded-sm md:bg-transparent md:text-blue-700 md:p-0 md:dark:text-zinc-200">Dashboard</Link>
+            </li>
+            <li>
+              <Link to="/generate" className="block py-2 px-3 hover:text-zinc-400 text-white bg-blue-700 rounded-sm md:bg-transparent md:text-blue-700 md:p-0 md:dark:text-zinc-200">AI Generator</Link>
+            </li>
+            <li>
+              <Link to="/all-products" className="block py-2 px-3 hover:text-zinc-400 text-white bg-blue-700 rounded-sm md:bg-transparent md:text-blue-700 md:p-0 md:dark:text-zinc-200">View all Products</Link>
             </li>
           </ul>
         </div>

@@ -1,6 +1,6 @@
 import React, { useContext } from "react";
 import { DataContext } from "../DataContext";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, ResponsiveContainer, ScatterChart, Scatter, PieChart, Pie, Cell, Legend } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
 
 const Dashboard = () => {
   const { queryResult } = useContext(DataContext);
@@ -37,14 +37,6 @@ const Dashboard = () => {
     .sort((a, b) => b.totalPrice - a.totalPrice)
     .slice(0, 10);
 
-  const topSellersByRating = Object.keys(sellerStats)
-    .map((seller) => ({
-      seller,
-      avgRating: sellerStats[seller].ratings.reduce((sum, r) => sum + r, 0) / sellerStats[seller].ratings.length,
-    }))
-    .sort((a, b) => b.avgRating - a.avgRating)
-    .slice(0, 10);
-
   const topPrices = products
     .map((p) => ({ title: p.title.slice(0, 15) + "...", price: p.extracted_price }))
     .sort((a, b) => b.price - a.price)
@@ -56,15 +48,46 @@ const Dashboard = () => {
     value: p.price,
   }));
 
+  // Pie Chart Data for Ratings
+  const ratingStats = products.reduce((acc, product) => {
+    const rating = product.rating ? Math.floor(product.rating) : "Unknown";
+    acc[rating] = (acc[rating] || 0) + 1;
+    return acc;
+  }, {});
+
+  const ratingPieData = Object.keys(ratingStats).map((rating) => ({
+    name: `Rating ${rating}`,
+    value: ratingStats[rating],
+  }));
+
+  // Pie Chart Data for Delivery (Free vs. Paid)
+  const deliveryStats = products.reduce(
+    (acc, product) => {
+      if (product.delivery && product.delivery.toLowerCase().includes("free")) {
+        acc.free += 1;
+      } else {
+        acc.paid += 1;
+      }
+      return acc;
+    },
+    { free: 0, paid: 0 }
+  );
+
+  const deliveryPieData = [
+    { name: "Free Delivery", value: deliveryStats.free },
+    { name: "Paid Delivery", value: deliveryStats.paid },
+  ];
+
   const COLORS = ["#4ADE80", "#FACC15", "#E879F9", "#38BDF8", "#FB923C", "#A855F7", "#34D399", "#F472B6", "#60A5FA", "#FCD34D"];
 
   return (
-    <div className="p-6 bg-gray-900 min-h-screen">
+    <div className="p-6 min-h-screen">
       <h2 className="text-2xl font-bold my-4 text-white text-center">Product Dashboard</h2>
 
-      {/* Grid Layout for Two Charts per Row */}
+      {/* Grid Layout for One Bar Chart + One Pie Chart Per Row */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* 1️⃣ Number of Products per Seller */}
+        
+        {/* 1️⃣ Top 10 Sellers by Product Count (Bar) + Delivery Info (Pie) */}
         <div>
           <h3 className="text-xl font-semibold my-2 text-white">Top 10 Sellers by Product Count</h3>
           <ResponsiveContainer width="100%" height={300}>
@@ -78,7 +101,22 @@ const Dashboard = () => {
           </ResponsiveContainer>
         </div>
 
-        {/* 2️⃣ Price Distribution */}
+        <div>
+          <h3 className="text-xl font-semibold my-2 text-white text-center">Free vs. Paid Delivery</h3>
+          <ResponsiveContainer width="100%" height={300}>
+            <PieChart>
+              <Pie data={deliveryPieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={100} label>
+                {deliveryPieData.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={["#34D399", "#F87171"][index]} />
+                ))}
+              </Pie>
+              <Tooltip contentStyle={{ backgroundColor: "white", color: "#fff", borderRadius: "5px" }} />
+              <Legend verticalAlign="bottom" wrapperStyle={{ color: "white" }} />
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* 2️⃣ Price Distribution (Bar) + Extracted Price Pie Chart */}
         <div>
           <h3 className="text-xl font-semibold my-2 text-white">Top 10 Price Distribution</h3>
           <ResponsiveContainer width="100%" height={300}>
@@ -92,7 +130,22 @@ const Dashboard = () => {
           </ResponsiveContainer>
         </div>
 
-        {/* 3️⃣ Total Price per Seller */}
+        <div>
+          <h3 className="text-xl font-semibold  my-2 text-white text-center">Top 10 Products by Price</h3>
+          <ResponsiveContainer width="100%" height={350} >
+            <PieChart>
+              <Pie  data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={100} label>
+                {pieData.map((entry, index) => (
+                  <Cell  key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                ))}
+              </Pie>
+              <Tooltip contentStyle={{ backgroundColor: "white", color: "#fff", borderRadius: "5px" }} />
+              <Legend verticalAlign="bottom" wrapperStyle={{ color: "white" }} />
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* 3️⃣ Total Price per Seller (Bar) + Rating Distribution (Pie) */}
         <div>
           <h3 className="text-xl font-semibold my-2 text-white">Top 10 Sellers by Total Price</h3>
           <ResponsiveContainer width="100%" height={300}>
@@ -106,36 +159,20 @@ const Dashboard = () => {
           </ResponsiveContainer>
         </div>
 
-        {/* 4️⃣ Seller vs. Average Rating */}
         <div>
-          <h3 className="text-xl font-semibold my-2 text-white">Top 10 Sellers by Average Rating</h3>
+          <h3 className="text-xl font-semibold my-2 text-white text-center">Distribution of Ratings</h3>
           <ResponsiveContainer width="100%" height={300}>
-            <ScatterChart>
-              <CartesianGrid stroke="gray" />
-              <XAxis dataKey="seller" name="Seller" stroke="white" />
-              <YAxis dataKey="avgRating" name="Average Rating" stroke="white" />
-              <Tooltip contentStyle={{ backgroundColor: "#222", color: "#fff", borderRadius: "5px" }} />
-              <Scatter data={topSellersByRating} fill="#38BDF8" />
-            </ScatterChart>
-          </ResponsiveContainer>
-        </div>
-
-        {/* 5️⃣ Pie Chart for extracted_price */}
-        <div className="col-span-1 md:col-span-2">
-          <h3 className="text-xl font-semibold my-2 text-white text-center">Top 10 Products by Price (Pie Chart)</h3>
-          <ResponsiveContainer width="100%" height={400}>
             <PieChart>
-              <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={120} fill="#82ca9d" label>
-                {pieData.map((entry, index) => (
+              <Pie data={ratingPieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={100} label>
+                {ratingPieData.map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                 ))}
               </Pie>
-              <Tooltip contentStyle={{ backgroundColor: "#222", color: "#fff", borderRadius: "5px" }} />
+              <Tooltip contentStyle={{ backgroundColor: "white", color: "#fff", borderRadius: "5px" }} />
               <Legend verticalAlign="bottom" wrapperStyle={{ color: "white" }} />
             </PieChart>
           </ResponsiveContainer>
         </div>
-        
       </div>
     </div>
   );
