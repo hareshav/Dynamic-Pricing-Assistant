@@ -8,7 +8,10 @@ from dotenv import load_dotenv
 from groclake.vectorlake import VectorLake
 from groclake.modellake import ModelLake
 from groclake.cataloglake import CatalogLake
-
+from groq import Groq
+client = Groq(
+    api_key=os.environ.get("GROQ_API_KEY"),
+)
 # Load environment variables
 load_dotenv()
 API = os.getenv("product_api")
@@ -85,53 +88,41 @@ def fetch_product_data(query: str) -> List[Dict[str, Any]]:
 
 
 def vectorize_and_search(query: str, data: List[Dict[str, Any]]) -> Dict[str, Any]:
-    """Vectorize product data and perform search"""
+    """Return top 10 items from data without vectorization"""
     try:
-        vectorlake_id = vectorlake.create({"vectorlake_name": query}).get(
-            "vectorlake_id"
-        )
-
-        for item in data:
-            vector = vectorlake.generate(item.get("title", "")).get("vector")
-            vectorlake.push(
+        # Simply return the first 10 items from the data list
+        top_10_data = data[:10] if len(data) > 10 else data
+        
+        # Format the result to match the expected structure
+        return  [
                 {
-                    "vector": vector,
-                    "vectorlake_id": vectorlake_id,
                     "document_text": item.get("title", ""),
-                    "vector_type": "text",
                     "metadata": item,
-                }
-            )
-
-        search_vector = vectorlake.generate(query).get("vector")
-        return vectorlake.search(
-            {
-                "vector": search_vector,
-                "vectorlake_id": vectorlake_id,
-                "vector_type": "text",
-                "top_k": 20,
-            }
-        )
+                    "score": 1.0  # Placeholder score since we're not doing actual similarity scoring
+                } for item in top_10_data
+            ]
+        
     except Exception:
-        raise HTTPException(status_code=500, detail="Error in vectorization")
+        raise HTTPException(status_code=500, detail="Error processing data")
 
 
 def get_detailed_analysis(search_results: Dict[str, Any], query: str) -> str:
-    """Get detailed analysis using ModelLake"""
+    """Get detailed analysis using Groq API with llama-3.3-70b-versatile model"""
     prompt = f"""Analyze the following product details and market context to recommend an optimal price.
     ### Market Context: {search_results}
     ### Product Details: {query}
     Consider factors such as competitor pricing, market demand, and product uniqueness while suggesting a competitive and profitable price in Indian rupees."""
     try:
-        return modellake.chat_complete(
-            {
-                "groc_account_id": GROCLAKE_ACCOUNT_ID,
-                "messages": [
-                    {"role": "system", "content": "You are a helpful assistant."},
-                    {"role": "user", "content": prompt},
-                ],
-            }
-        )["answer"]
+        # Use Groq API with llama-3.3-70b-versatile model
+        chat_completion = client.chat.completions.create(
+            messages=[
+                {"role": "system", "content": "You are a helpful assistant."},
+                {"role": "user", "content": prompt}
+            ],
+            model="llama-3.3-70b-versatile",
+        )
+        # Extract content from response
+        return chat_completion.choices[0].message.content
     except Exception:
         raise HTTPException(status_code=500, detail="Error getting detailed analysis")
 
@@ -139,18 +130,34 @@ def get_detailed_analysis(search_results: Dict[str, Any], query: str) -> str:
 def calculate_price_statistics(
     product_data: List[Dict[str, Any]],
 ) -> Optional[Dict[str, float]]:
-    """Calculate price statistics from product data"""
+    """Calculate price statistics from product data after removing outliers"""
     try:
         df = pd.DataFrame(product_data)
         if "price" in df.columns:
             df["price"] = pd.to_numeric(
-                df["price"].str.replace("₹", "").str.replace(",", ""), errors="coerce"
+                df["price"].astype(str).str.replace("₹", "").str.replace(",", ""), errors="coerce"
             )
-            return {
-                "average_price": df["price"].mean(),
-                "minimum_price": df["price"].min(),
-                "maximum_price": df["price"].max(),
-            }
+            df = df.dropna(subset=["price"])  # Remove NaN values
+            
+            # Compute IQR
+            Q1 = df["price"].quantile(0.25)
+            Q3 = df["price"].quantile(0.75)
+            IQR = Q3 - Q1
+            
+            # Define outlier bounds
+            lower_bound = Q1 - 1.5 * IQR
+            upper_bound = Q3 + 1.5 * IQR
+            
+            # Filter out outliers
+            df_filtered = df[(df["price"] >= lower_bound) & (df["price"] <= upper_bound)]
+            
+            if not df_filtered.empty:
+                return {
+                    "average_price": float(df_filtered["price"].mean()),
+                    "minimum_price": float(df_filtered["price"].min()),
+                    "maximum_price": float(df_filtered["price"].max()),
+                }
+
     except Exception:
         pass
     return None

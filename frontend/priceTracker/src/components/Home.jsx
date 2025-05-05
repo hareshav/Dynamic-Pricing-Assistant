@@ -1,8 +1,10 @@
-import React, { useState,useContext } from 'react';
+import React, { useState, useContext, useRef } from 'react';
 import Numbers from './Numbers';
 import RotatingText from '../RotatingText';
-import Analysis from './Analysis'; 
+import Analysis from './Analysis';
 import { DataContext } from '../DataContext';
+import { Mic, MicOff, Loader2 } from 'lucide-react';
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
 const Home = () => {
     const [query, setQuery] = useState('');
@@ -10,9 +12,107 @@ const Home = () => {
     const [results, setResults] = useState([]);
     const [price, setPrice] = useState(null);
     const [analyze, setAnalyze] = useState('');
+    const [recordingAudio, setRecordingAudio] = useState(false);
+    const [error, setError] = useState('');
+    const [mediaStream, setMediaStream] = useState(null);
     const { setQueryResult } = useContext(DataContext);
-    const handleSubmit = async () => {
-        if (!query.trim()) {
+
+    const mediaRecorderRef = useRef(null);
+    const audioChunksRef = useRef([]);
+
+    // Initialize Gemini API
+    const genAI = new GoogleGenerativeAI("AIzaSyD9a-QZILnhna7EEOVETVb-qcSCwitAYoo");
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
+
+    const blobToBase64 = (blob) => {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                const base64String = reader.result.split(',')[1];
+                resolve(base64String);
+            };
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+        });
+    };
+
+    const startAudioRecording = async () => {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            setMediaStream(stream);
+            
+            mediaRecorderRef.current = new MediaRecorder(stream);
+            audioChunksRef.current = [];
+            
+            mediaRecorderRef.current.ondataavailable = (event) => {
+                if (event.data.size > 0) {
+                    audioChunksRef.current.push(event.data);
+                }
+            };
+            
+            mediaRecorderRef.current.start();
+            setRecordingAudio(true);
+            setError('');
+        } catch (err) {
+            setError("Failed to access microphone. Please check permissions.");
+            console.error("Microphone access error:", err);
+        }
+    };
+
+    const stopAudioRecording = () => {
+        if (mediaRecorderRef.current && recordingAudio) {
+            mediaRecorderRef.current.stop();
+            setRecordingAudio(false);
+            
+            mediaRecorderRef.current.onstop = async () => {
+                const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+                await analyzeAudio(audioBlob);
+                
+                if (mediaStream) {
+                    mediaStream.getTracks().forEach(track => track.stop());
+                }
+            };
+        }
+    };
+
+    const analyzeAudio = async (audioBlob) => {
+        setLoading(true);
+        try {
+            const base64Audio = await blobToBase64(audioBlob);
+            
+            const result = await model.generateContent({
+                contents: [{
+                    role: 'user',
+                    parts: [
+                        {
+                            inlineData: {
+                                mimeType: 'audio/webm',
+                                data: base64Audio
+                            }
+                        },
+                        { text: "Transcribe this audio and extract only the product name" }
+                    ]
+                }]
+            });
+
+            const analysis = await result.response.text();
+            processAnalysis(analysis);
+        } catch (err) {
+            setError("Failed to analyze audio. Please try again.");
+            console.error("Audio analysis error:", err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const processAnalysis = (analysis) => {
+        setQuery(analysis.trim());
+        handleSubmit(analysis.trim());
+    };
+
+    const handleSubmit = async (voiceQuery = '') => {
+        const searchQuery = voiceQuery || query;
+        if (!searchQuery.trim()) {
             alert("Please enter a product name.");
             return;
         }
@@ -24,7 +124,7 @@ const Home = () => {
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ query }),
+                body: JSON.stringify({ query: searchQuery }),
             });
 
             if (!res.ok) {
@@ -32,7 +132,8 @@ const Home = () => {
             }
 
             const data = await res.json();
-            setResults(data.search_results.results);
+            console.log(data);
+            setResults(data.search_results);
             setPrice(data.price_statistics);
             setAnalyze(data.analysis);
             setQueryResult(data);
@@ -51,7 +152,7 @@ const Home = () => {
                 {/* Header Section */}
                 <div className="hero flex flex-col items-center justify-center gap-4 my-8">
                     <h1 className="text-2xl md:text-6xl text-cyan-400 font-bold text-center">
-                       🚀 Real-Time Data, Anytime
+                        Real-Time Data, Anytime
                     </h1>
                     <div className="m-5 flex items-center gap-2">
                         <p className="text-white text-2xl font-light">
@@ -59,8 +160,7 @@ const Home = () => {
                         </p>
                         <RotatingText
                             texts={['Amazon', 'Flipkart', '& more!']}
-                            mainClassName="px-2 sm:px-2 md:px-3 bg-indigo-600 text-white text-xl font-bold overflow-hidden py-0.5 sm:py-1 md:py-2 
-                                        justify-center rounded-lg"
+                            mainClassName="px-2 sm:px-2 md:px-3 bg-indigo-600 text-white text-xl font-bold overflow-hidden py-0.5 sm:py-1 md:py-2 justify-center rounded-lg"
                             staggerFrom="last"
                             initial={{ y: "100%" }}
                             animate={{ y: 0 }}
@@ -72,30 +172,50 @@ const Home = () => {
                         />
                     </div>
                     
-                    {/* Search Form */}
+                    {/* Search Form with Voice Input */}
                     <div className="m-10 flex flex-col sm:flex-row gap-2 sm:gap-4 w-full max-w-md">
-                        <input
-                            type="text"
-                            placeholder="Enter the product"
-                            value={query}
-                            onChange={(e) => setQuery(e.target.value)}
-                            className="border border-gray-700 bg-gray-800 p-2 rounded-lg w-full text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-400"
-                        />
+                        <div className="relative flex-1">
+                            <input
+                                type="text"
+                                placeholder="Enter the product"
+                                value={query}
+                                onChange={(e) => setQuery(e.target.value)}
+                                className="border border-gray-700 bg-gray-800 p-2 rounded-lg w-full text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                            />
+                            <button
+                                onClick={recordingAudio ? stopAudioRecording : startAudioRecording}
+                                className="absolute right-2 top-1/2 transform -translate-y-1/2 p-2 rounded-full hover:bg-gray-700 transition-colors"
+                            >
+                                {loading ? (
+                                    <Loader2 className="w-5 h-5 animate-spin text-blue-400" />
+                                ) : recordingAudio ? (
+                                    <MicOff className="w-5 h-5 text-red-400" />
+                                ) : (
+                                    <Mic className="w-5 h-5 text-blue-400" />
+                                )}
+                            </button>
+
+                        </div>
                         <button
                             className="bg-blue-950 px-4 py-2 rounded-lg cursor-pointer text-gray-200 font-semibold hover:bg-blue-900 transition-colors"
-                            onClick={handleSubmit}
+                            onClick={() => handleSubmit()}
                         >
                             Search
                         </button>
                     </div>
                     
+                    {/* Error Message */}
+                    {error && (
+                        <div className="text-red-400 mt-2">
+                            {error}
+                        </div>
+                    )}
+                    
                     {loading && (
                         <div className="text-cyan-400 mt-4 flex gap-4 items-center">
-                            
                             <div className='loader'></div>
-                            <span className='font-semibold animate-pulse'>Please wait ! Great things takes time..</span>
+                            <span className='font-semibold animate-pulse'>Please wait! Great things take time..</span>
                         </div>
-                        
                     )}
                 </div>
 
@@ -106,8 +226,8 @@ const Home = () => {
                     </div>
                 )}
 
-                {/* Results and Analysis Section - Side by Side Layout */}
-                {(results.length > 0 || analyze) && (
+                {/* Results and Analysis Section */}
+                {(results  &&  analyze) && (
                     <div className="mt-8 flex flex-col lg:flex-row">
                         {/* Products Section */}
                         {results.length > 0 && (
@@ -157,7 +277,7 @@ const Home = () => {
                             </div>
                         )}
 
-                        {/* Vertical Divider - Only visible on large screens */}
+                        {/* Vertical Divider */}
                         {results.length > 0 && analyze && (
                             <div className="hidden lg:block border-l border-gray-700 mx-4"></div>
                         )}
