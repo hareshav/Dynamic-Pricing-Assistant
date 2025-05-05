@@ -20,15 +20,11 @@ This project is a comprehensive data scraping and price-tracking platform design
 ## Architecture Diagram
 ![Internet](https://github.com/user-attachments/assets/476f7002-a535-4917-b100-15aba3278d6f)
 
-
-
 ## 🎭Demo Vedio 🎭
 
 ### Working of the Application Developed!!!
 
-https://github.com/user-attachments/assets/cb455c73-7d17-4286-a527-499b05d0deb9
-
-
+https://github.com/user-attachments/assets/ab421da8-fc8b-4de9-a58d-f1f71f9038ee
 
 ## 💡 Our Solution 
 
